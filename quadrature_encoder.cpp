@@ -19,9 +19,6 @@
 
 PIO encoders_pio = pio0;
 
-typedef int (quadrature_encoder::*ReadFunctionPtr)();
-typedef int (quadrature_encoder::*WriteFunctionPtr)(int);
-
 //
 // ---- quadrature encoder interface example
 //
@@ -64,13 +61,15 @@ public:
     int old_value = 0;
 };
 
+typedef int (quadrature_encoder::*ReadFunctionPtr)();
+typedef int (quadrature_encoder::*WriteFunctionPtr)(int);
 
 struct cmd_entry {
     uint8_t cmd;
+    quadrature_encoder axis;
     ReadFunctionPtr read_fn;
     WriteFunctionPtr write_fn;
-}
-
+};
 
 int main() {
     stdio_init_all();
@@ -104,9 +103,9 @@ int main() {
     quadrature_encoder z(encoders_pio, 2, 14);                                                 
 
     cmd_entry cmd_table[3] = {
-        {0x61, quadrature_encoder::read, nullptr},
-        {0x62, quadrature_encoder::read, nullptr},
-        {0x63, quadrature_encoder::read, nullptr},
+        {ENCODER_READ_COUNTER_X, x, &quadrature_encoder::read, nullptr},
+        {ENCODER_READ_COUNTER_Y, y, &quadrature_encoder::read, nullptr},
+        {ENCODER_READ_COUNTER_Z, z, &quadrature_encoder::read, nullptr},
     };
 
     #define MAX_MSG_LEN     (1 + (4 * 4))           // 1 command + 4 values of 4 bytes
@@ -117,45 +116,28 @@ int main() {
     uint8_t cmd = 0;
     
     while (1) {
-        if (cmd == 0) {
-            spi_read_blocking(spi_default, 0xFF, in_buf, 1);
-            cmd = in_buf[0];
-        }
+        spi_read_blocking(spi_default, 0xEA, in_buf, 1);
+        cmd = in_buf[0];
         
         //printf("Comando: %x \n", static_cast<int>(cmd));
-        switch (cmd) {
-            case 0x61:
-                current_value = x.read();
-                break;
 
-            case 0x62:
-                current_value = y.read();
-                break;
+        for (int i=0; i<(sizeof(cmd_table) / sizeof(cmd_entry)); i++) {
+            current_value = 0;
+            if (cmd == cmd_table[i].cmd) {
 
-            case 0x63:
-                current_value = z.read();
-                break;
-
-            default:
-                cmd = 0;
-                current_value = 0;
-                break;
-        }
-
-        //printf("%d", current_value);
-        uint8_t buf[4];
-        buf[0] = static_cast<uint8_t>((current_value >> 24) & 0xFF);
-        buf[1] = static_cast<uint8_t>((current_value >> 16) & 0xFF);
-        buf[2] = static_cast<uint8_t>((current_value >> 8) & 0xFF);
-        buf[3] = static_cast<uint8_t>((current_value >> 0) & 0xFF);
-        spi_write_read_blocking(spi_default, buf, in_buf, 4);
-        for (int i=0; i<4 ; i++) {
-            if (in_buf[i]==0x61 || in_buf[i]==0x62 || in_buf[i]==0x63) {
-                cmd = in_buf[i];
+                // https://isocpp.org/wiki/faq/pointers-to-members
+                // How do I create and use an array of pointer-to-member-function? Step 2
+                current_value = ((cmd_table[i].axis).*(cmd_table[i].read_fn))();                
+                //printf("%d", current_value);
+                uint8_t buf[4];
+                buf[0] = static_cast<uint8_t>((current_value >> 24) & 0xFF);
+                buf[1] = static_cast<uint8_t>((current_value >> 16) & 0xFF);
+                buf[2] = static_cast<uint8_t>((current_value >> 8) & 0xFF);
+                buf[3] = static_cast<uint8_t>((current_value >> 0) & 0xFF);
+                spi_write_read_blocking(spi_default, buf, in_buf, 4);
                 break;
             }
         }
-
     }
     #endif
 }
