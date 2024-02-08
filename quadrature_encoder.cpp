@@ -19,6 +19,9 @@
 
 PIO encoders_pio = pio0;
 
+typedef int (quadrature_encoder::*ReadFunctionPtr)();
+typedef int (quadrature_encoder::*WriteFunctionPtr)(int);
+
 //
 // ---- quadrature encoder interface example
 //
@@ -50,12 +53,7 @@ public:
         current_value = quadrature_encoder_get_count(pio, sm);
         delta = current_value - old_value;
         old_value = current_value;
-        current_value_spi_buf[0] = static_cast<uint8_t>((current_value >> 24) & 0xFF);
-        current_value_spi_buf[1] = static_cast<uint8_t>((current_value >> 16) & 0xFF);
-        current_value_spi_buf[2] = static_cast<uint8_t>((current_value >> 8) & 0xFF);
-        current_value_spi_buf[3] = static_cast<uint8_t>((current_value >> 0) & 0xFF);
         return current_value;
-
     }
 
     PIO pio;
@@ -63,9 +61,15 @@ public:
     uint PIN_AB;
     int delta = 0;
     int current_value = 0; 
-    uint8_t current_value_spi_buf[4];
     int old_value = 0;
 };
+
+
+struct cmd_entry {
+    uint8_t cmd;
+    ReadFunctionPtr read_fn;
+    WriteFunctionPtr write_fn;
+}
 
 
 int main() {
@@ -99,88 +103,60 @@ int main() {
     quadrature_encoder y(encoders_pio, 1, 12);      // The B phase must be connected to the next pin
     quadrature_encoder z(encoders_pio, 2, 14);                                                 
 
+    cmd_entry cmd_table[3] = {
+        {0x61, quadrature_encoder::read, nullptr},
+        {0x62, quadrature_encoder::read, nullptr},
+        {0x63, quadrature_encoder::read, nullptr},
+    };
+
     #define MAX_MSG_LEN     (1 + (4 * 4))           // 1 command + 4 values of 4 bytes
     uint8_t in_buf[MAX_MSG_LEN] = {0};
     //uint8_t out_buf[MAX_MSG_LEN] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
     uint8_t *out_buf_ptr = nullptr;
+    int current_value = 0;
+    uint8_t cmd = 0;
     
-    while (1) {      
-        if (!out_buf_ptr) {
+    while (1) {
+        if (cmd == 0) {
             spi_read_blocking(spi_default, 0xFF, in_buf, 1);
+            cmd = in_buf[0];
         }
-        printf("Comando: %x \n", static_cast<int>(in_buf[0]));        
-        switch (in_buf[0])
-        {
-        case 0x61:
-            x.read();
-            out_buf_ptr = x.current_value_spi_buf;
-            break;
+        
+        //printf("Comando: %x \n", static_cast<int>(cmd));
+        switch (cmd) {
+            case 0x61:
+                current_value = x.read();
+                break;
 
-        case 0x62:
-            y.read();
-            out_buf_ptr = y.current_value_spi_buf;
-            break;
+            case 0x62:
+                current_value = y.read();
+                break;
 
-        case 0x63:
-            z.read();
-            out_buf_ptr = z.current_value_spi_buf;
-            break;
+            case 0x63:
+                current_value = z.read();
+                break;
 
-        default:
-            out_buf_ptr = nullptr;
-            break;
-        }
-
-        if (out_buf_ptr) {
-            spi_write_read_blocking(spi_default, out_buf_ptr, in_buf, 4);
-            printf("sending: %d\n", *out_buf_ptr);
+            default:
+                cmd = 0;
+                current_value = 0;
+                break;
         }
 
-        printf("ptr addr: %p\n", out_buf_ptr);
+        //printf("%d", current_value);
+        uint8_t buf[4];
+        buf[0] = static_cast<uint8_t>((current_value >> 24) & 0xFF);
+        buf[1] = static_cast<uint8_t>((current_value >> 16) & 0xFF);
+        buf[2] = static_cast<uint8_t>((current_value >> 8) & 0xFF);
+        buf[3] = static_cast<uint8_t>((current_value >> 0) & 0xFF);
+        spi_write_read_blocking(spi_default, buf, in_buf, 4);
+        for (int i=0; i<4 ; i++) {
+            if (in_buf[i]==0x61 || in_buf[i]==0x62 || in_buf[i]==0x63) {
+                cmd = in_buf[i];
+                break;
+            }
+        }
 
-        // spi_write_read_blocking(spi_default, out_buf, in_buf, 15);
-        // for (int i = 0; i < MAX_MSG_LEN; ++i) {
-        //     printf("%x :", static_cast<int>(in_buf[i]));
-        // }
-        // spi_read_blocking(spi_default, 0x00, in_buf, 1);
-        // switch (in_buf[0]) {
-        //     case ENCODER_READ_COUNTER_X:
-        //         x.read();
-        //         printf("res X: %d %d %d %d |", x.current_value_spi_buf[0], x.current_value_spi_buf[1], x.current_value_spi_buf[2], x.current_value_spi_buf[3]);
-        //         spi_write_blocking(spi_default, x.current_value_spi_buf, 4);
-        //         /* code */
-        //         break;
-
-        //     case ENCODER_READ_COUNTER_Y:
-        //         y.read();
-        //         printf("res Y: %d %d %d %d |", y.current_value_spi_buf[0], y.current_value_spi_buf[1], y.current_value_spi_buf[2], y.current_value_spi_buf[3]);
-        //         spi_write_blocking(spi_default, y.current_value_spi_buf, 4);
-        //         /* code */
-        //         break;
-
-        //     case ENCODER_READ_COUNTER_Z:
-        //         z.read();
-        //         printf("res Z: %d %d %d %d |\n", z.current_value_spi_buf[0], z.current_value_spi_buf[1], z.current_value_spi_buf[2], z.current_value_spi_buf[3]);
-        //         spi_write_blocking(spi_default, z.current_value_spi_buf, 4);
-        //         /* code */
-        //         break;
-
-        //     default:
-        //         break;
-        // }
-
-        // note: thanks to two's complement arithmetic delta will always
-        // be correct even when new_value wraps around MAXINT / MININT
-        // x.read();
-        // y.read();
-        // z.read();
-
-        // printf("X position %8d, delta %6d | Y position %8d, delta %6d | Z position %8d, delta %6d |\n", 
-        //         x.current_value, x.delta, 
-        //         y.current_value, y.delta, 
-        //         z.current_value, z.delta);
-        // sleep_ms(100);
-    }    
+    }
     #endif
 }
 
