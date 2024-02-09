@@ -6,7 +6,10 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <mutex>
 #include "pico/binary_info.h"
+#include "pico/multicore.h"
+#include <pico/mutex.h>
 #include "hardware/spi.h"
 
 #include "pico/stdlib.h"
@@ -16,8 +19,21 @@
 #include "quadrature_encoder.pio.h"
 #include "encoder.h"
 
-
 PIO encoders_pio = pio0;
+const uint LED_PIN = PICO_DEFAULT_LED_PIN;
+
+int spi_response(int current_value){
+    // printf("cv: %d", current_value);
+    uint8_t in_buf[4];
+    uint8_t buf[4];
+    buf[0] = static_cast<uint8_t>((current_value >> 24) & 0xFF);
+    buf[1] = static_cast<uint8_t>((current_value >> 16) & 0xFF);
+    buf[2] = static_cast<uint8_t>((current_value >> 8) & 0xFF);
+    buf[3] = static_cast<uint8_t>((current_value >> 0) & 0xFF);
+    spi_write_read_blocking(spi_default, buf, in_buf, 4);
+    return static_cast<int>(in_buf[0] << 24 | in_buf[1] << 16 | in_buf[2] << 8 | in_buf[3] << 0);
+}
+
 
 //
 // ---- quadrature encoder interface example
@@ -40,36 +56,111 @@ PIO encoders_pio = pio0;
 // encoder count updated and because of that it supports very high step rates.
 //
 
+#define MAX_MSG_LEN     (1 + (4 * 4))           // 1 command + 4 values of 4 bytes
+
 class quadrature_encoder {
 public:
+    quadrature_encoder() {}
+
     quadrature_encoder(PIO pio, int sm, uint PIN_AB) : pio(pio), sm(sm), PIN_AB(PIN_AB) {
-        quadrature_encoder_program_init(pio, sm, PIN_AB, 0);    
+        mutex_init(&mtx);   
     }
 
-    int read() {
-        current_value = quadrature_encoder_get_count(pio, sm);
+    int read_from_PIO() {
+        int val = quadrature_encoder_get_count(pio, sm);
+
+        mutex_enter_blocking(&mtx);
+        current_value = val;
         delta = current_value - old_value;
         old_value = current_value;
-        return current_value;
+        if (current_value > target) {
+            gpio_put(LED_PIN, 1);
+        } else {
+            gpio_put(LED_PIN, 0);
+        }
+        mutex_exit(&mtx);	
+        return val;        
     }
 
+    int get_count() {
+        mutex_enter_blocking(&mtx);
+        int val = current_value;
+        mutex_exit(&mtx);
+        return val;
+    }
+
+    void set_count(int val) {
+        mutex_enter_blocking(&mtx);
+        current_value = val;
+        mutex_exit(&mtx);        
+    }
+
+    void init() {
+        quadrature_encoder_program_init(pio, sm, PIN_AB, 0);
+    }
+
+    mutex_t	mtx;
     PIO pio;
     int sm;
     uint PIN_AB;
     int delta = 0;
     int current_value = 0; 
+    int target = 125;
     int old_value = 0;
 };
 
-typedef int (quadrature_encoder::*ReadFunctionPtr)();
-typedef int (quadrature_encoder::*WriteFunctionPtr)(int);
+quadrature_encoder x(encoders_pio, 0, 10);      // Base pin to connect the A phase of the encoder.                                                    
+quadrature_encoder y(encoders_pio, 1, 12);      // The B phase must be connected to the next pin
+quadrature_encoder z(encoders_pio, 2, 14);                                                 
 
-struct cmd_entry {
-    uint8_t cmd;
-    quadrature_encoder axis;
-    ReadFunctionPtr read_fn;
-    WriteFunctionPtr write_fn;
-};
+void core1_entry() {
+    while (1) {        
+        uint8_t in_buf[MAX_MSG_LEN] = {0};
+        //uint8_t out_buf[MAX_MSG_LEN] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
+        uint8_t *out_buf_ptr = nullptr;
+
+        // int prev = z.get_count();
+        // printf("prev %d", prev);
+
+        spi_read_blocking(spi_default, 0xEA, in_buf, 1);
+        uint8_t cmd = in_buf[0];
+        //printf("Cmd: %x \n", static_cast<int>(cmd));
+        
+        int current_value = 0;
+        int val = 0;
+        switch (cmd & 0x7F)
+        {
+        case ENCODER_COUNTER_X:
+            current_value = x.get_count();
+            val = spi_response(current_value);
+            if (cmd & 0x80) {
+                x.set_count(val);
+            }
+            break;
+        
+        case ENCODER_COUNTER_Y:
+            current_value = y.get_count();
+            val = spi_response(current_value);
+            if (cmd & 0x80) {
+                x.set_count(val);
+            }
+            break;
+
+        case ENCODER_COUNTER_Z:
+            current_value = z.get_count();
+            val = spi_response(current_value);
+            if (cmd & 0x80) {
+                x.set_count(val);
+            }
+            break;
+
+        default:
+            break;
+        }
+        gpio_put(LED_PIN, 0);
+        
+    }
+}
 
 int main() {
     stdio_init_all();
@@ -94,52 +185,30 @@ int main() {
     spi_set_format(spi_default, 8, SPI_CPOL_1, SPI_CPHA_1, SPI_MSB_FIRST); 
     spi_set_slave(spi_default, true);    
 
+    gpio_init(LED_PIN);
+    gpio_set_dir(LED_PIN, GPIO_OUT);
+
     // we don't really need to keep the offset, as this program must be loaded
     // at offset 0
     pio_add_program(encoders_pio, &quadrature_encoder_program);
-    
-    quadrature_encoder x(encoders_pio, 0, 10);      // Base pin to connect the A phase of the encoder.                                                    
-    quadrature_encoder y(encoders_pio, 1, 12);      // The B phase must be connected to the next pin
-    quadrature_encoder z(encoders_pio, 2, 14);                                                 
 
-    cmd_entry cmd_table[3] = {
-        {ENCODER_READ_COUNTER_X, x, &quadrature_encoder::read, nullptr},
-        {ENCODER_READ_COUNTER_Y, y, &quadrature_encoder::read, nullptr},
-        {ENCODER_READ_COUNTER_Z, z, &quadrature_encoder::read, nullptr},
-    };
+    x.init();   // this calls quadrature_encoder_program_init that MUST be called after pio_add_program;
+    y.init();   // otherwise will work only after picotool flash or reboot, but not on cold restart // LESSON LEARNED //
+    z.init();
 
-    #define MAX_MSG_LEN     (1 + (4 * 4))           // 1 command + 4 values of 4 bytes
-    uint8_t in_buf[MAX_MSG_LEN] = {0};
-    //uint8_t out_buf[MAX_MSG_LEN] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
-    uint8_t *out_buf_ptr = nullptr;
-    int current_value = 0;
-    uint8_t cmd = 0;
-    
-    while (1) {
-        spi_read_blocking(spi_default, 0xEA, in_buf, 1);
-        cmd = in_buf[0];
+    multicore_launch_core1(core1_entry);
+
+    while (1) {    
+        // printf("x: %d", x.read_from_PIO());
+        // printf("y: %d", y.read_from_PIO());
+        // printf("z: %d", z.read_from_PIO());
         
-        //printf("Comando: %x \n", static_cast<int>(cmd));
-
-        for (int i=0; i<(sizeof(cmd_table) / sizeof(cmd_entry)); i++) {
-            current_value = 0;
-            if (cmd == cmd_table[i].cmd) {
-
-                // https://isocpp.org/wiki/faq/pointers-to-members
-                // How do I create and use an array of pointer-to-member-function? Step 2
-                current_value = ((cmd_table[i].axis).*(cmd_table[i].read_fn))();                
-                //printf("%d", current_value);
-                uint8_t buf[4];
-                buf[0] = static_cast<uint8_t>((current_value >> 24) & 0xFF);
-                buf[1] = static_cast<uint8_t>((current_value >> 16) & 0xFF);
-                buf[2] = static_cast<uint8_t>((current_value >> 8) & 0xFF);
-                buf[3] = static_cast<uint8_t>((current_value >> 0) & 0xFF);
-                spi_write_read_blocking(spi_default, buf, in_buf, 4);
-                break;
-            }
-        }
+        x.read_from_PIO();        
+        y.read_from_PIO();
+        z.read_from_PIO();
     }
+        
     #endif
 }
 
-    
+
