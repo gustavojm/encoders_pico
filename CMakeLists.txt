@@ -18,7 +18,7 @@ add_executable(quadrature_encoder_cpp)
 
 pico_generate_pio_header(quadrature_encoder_cpp ${CMAKE_CURRENT_LIST_DIR}/quadrature_encoder.pio)
 
-target_sources(quadrature_encoder_cpp PRIVATE quadrature_encoder.cpp)
+target_sources(quadrature_encoder_cpp PRIVATE main.cpp core1_spi.cpp)
 
 target_link_libraries(quadrature_encoder_cpp PRIVATE
         pico_stdlib

@@ -16,24 +16,12 @@
 #include "hardware/pio.h"
 #include "hardware/timer.h"
 
+#include "quadrature_encoder.h"
 #include "quadrature_encoder.pio.h"
-#include "encoder.h"
+#include "core1_spi.h"
 
 PIO encoders_pio = pio0;
 const uint LED_PIN = PICO_DEFAULT_LED_PIN;
-
-int spi_response(int current_value){
-    // printf("cv: %d", current_value);
-    uint8_t in_buf[4];
-    uint8_t buf[4];
-    buf[0] = static_cast<uint8_t>((current_value >> 24) & 0xFF);
-    buf[1] = static_cast<uint8_t>((current_value >> 16) & 0xFF);
-    buf[2] = static_cast<uint8_t>((current_value >> 8) & 0xFF);
-    buf[3] = static_cast<uint8_t>((current_value >> 0) & 0xFF);
-    spi_write_read_blocking(spi_default, buf, in_buf, 4);
-    return static_cast<int>(in_buf[0] << 24 | in_buf[1] << 16 | in_buf[2] << 8 | in_buf[3] << 0);
-}
-
 
 //
 // ---- quadrature encoder interface example
@@ -56,111 +44,9 @@ int spi_response(int current_value){
 // encoder count updated and because of that it supports very high step rates.
 //
 
-#define MAX_MSG_LEN     (1 + (4 * 4))           // 1 command + 4 values of 4 bytes
-
-class quadrature_encoder {
-public:
-    quadrature_encoder() {}
-
-    quadrature_encoder(PIO pio, int sm, uint PIN_AB) : pio(pio), sm(sm), PIN_AB(PIN_AB) {
-        mutex_init(&mtx);   
-    }
-
-    int read_from_PIO() {
-        int val = quadrature_encoder_get_count(pio, sm);
-
-        mutex_enter_blocking(&mtx);
-        current_value = val;
-        delta = current_value - old_value;
-        old_value = current_value;
-        if (current_value > target) {
-            gpio_put(LED_PIN, 1);
-        } else {
-            gpio_put(LED_PIN, 0);
-        }
-        mutex_exit(&mtx);	
-        return val;        
-    }
-
-    int get_count() {
-        mutex_enter_blocking(&mtx);
-        int val = current_value;
-        mutex_exit(&mtx);
-        return val;
-    }
-
-    void set_count(int val) {
-        mutex_enter_blocking(&mtx);
-        current_value = val;
-        mutex_exit(&mtx);        
-    }
-
-    void init() {
-        quadrature_encoder_program_init(pio, sm, PIN_AB, 0);
-    }
-
-    mutex_t	mtx;
-    PIO pio;
-    int sm;
-    uint PIN_AB;
-    int delta = 0;
-    int current_value = 0; 
-    int target = 125;
-    int old_value = 0;
-};
-
 quadrature_encoder x(encoders_pio, 0, 10);      // Base pin to connect the A phase of the encoder.                                                    
 quadrature_encoder y(encoders_pio, 1, 12);      // The B phase must be connected to the next pin
 quadrature_encoder z(encoders_pio, 2, 14);                                                 
-
-void core1_entry() {
-    while (1) {        
-        uint8_t in_buf[MAX_MSG_LEN] = {0};
-        //uint8_t out_buf[MAX_MSG_LEN] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
-        uint8_t *out_buf_ptr = nullptr;
-
-        // int prev = z.get_count();
-        // printf("prev %d", prev);
-
-        spi_read_blocking(spi_default, 0xEA, in_buf, 1);
-        uint8_t cmd = in_buf[0];
-        //printf("Cmd: %x \n", static_cast<int>(cmd));
-        
-        int current_value = 0;
-        int val = 0;
-        switch (cmd & 0x7F)
-        {
-        case ENCODER_COUNTER_X:
-            current_value = x.get_count();
-            val = spi_response(current_value);
-            if (cmd & 0x80) {
-                x.set_count(val);
-            }
-            break;
-        
-        case ENCODER_COUNTER_Y:
-            current_value = y.get_count();
-            val = spi_response(current_value);
-            if (cmd & 0x80) {
-                x.set_count(val);
-            }
-            break;
-
-        case ENCODER_COUNTER_Z:
-            current_value = z.get_count();
-            val = spi_response(current_value);
-            if (cmd & 0x80) {
-                x.set_count(val);
-            }
-            break;
-
-        default:
-            break;
-        }
-        gpio_put(LED_PIN, 0);
-        
-    }
-}
 
 int main() {
     stdio_init_all();
