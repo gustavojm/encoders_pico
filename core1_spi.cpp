@@ -2,8 +2,6 @@
 
 #define HARD_LIMITS     0x40
 
-extern const uint IRQ_TO_REMA = 20;
-
 extern quadrature_encoder x, y, z;
 
 void fill_buf(uint8_t * buf, int value) {
@@ -141,7 +139,6 @@ void core1_entry() {
 
             case HARD_LIMITS:
                 if (cmd & quadrature_encoder::WRITE_MASK) {
-                    gpio_put(IRQ_TO_REMA, 0);
                 } else {
                     limits = gpio_get_all() & 0xFF;
                     spi_write_blocking(spi_default, &limits, 1);
@@ -149,7 +146,7 @@ void core1_entry() {
                 break;
 
             default:               
-                gpio_put(IRQ_TO_REMA, 1);
+                gpio_put(SPI_ERROR_LED, 1);
                 sleep_us(10);       // very important... helps to resync in case of restart of raspberry pi pico 
                 break;
         }

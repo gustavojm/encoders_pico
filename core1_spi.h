@@ -17,4 +17,7 @@
 
 void core1_entry();
 
+extern const uint IRQ_TO_REMA;
+extern const uint SPI_ERROR_LED;
+
 #endif      // CORE1_SPI_H

@@ -22,7 +22,9 @@
 
 PIO encoders_pio = pio0;
 const uint ON_BOARD_LED_PIN = PICO_DEFAULT_LED_PIN;
+
 const uint IRQ_TO_REMA = 20;
+const uint SPI_ERROR_LED = 21;
 
 //
 // ---- quadrature encoder interface example
@@ -66,6 +68,8 @@ int main() {
     gpio_init(IRQ_TO_REMA);
     gpio_set_dir(IRQ_TO_REMA, GPIO_OUT);
 
+    gpio_init(SPI_ERROR_LED);
+    gpio_set_dir(SPI_ERROR_LED, GPIO_OUT);
 
     // we don't really need to keep the offset, as this program must be loaded
     // at offset 0
