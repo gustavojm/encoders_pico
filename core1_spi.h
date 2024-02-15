@@ -15,14 +15,6 @@
 
 #include "quadrature_encoder.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 void core1_entry();
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif      // CORE1_SPI_H

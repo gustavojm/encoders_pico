@@ -27,8 +27,7 @@ target_link_libraries(quadrature_encoder_cpp PRIVATE
         hardware_spi
         )
 
-target_compile_definitions(quadrature_encoder_cpp 
-        PUBLIC PICO_XOSC_STARTUP_DELAY_MULTIPLIER=64
+target_compile_definitions(quadrature_encoder_cpp         
         PUBLIC PICO_DEFAULT_SPI_RX_PIN=16
         PUBLIC PICO_DEFAULT_SPI_SCK_PIN=18
         PUBLIC PICO_DEFAULT_SPI_TX_PIN=19

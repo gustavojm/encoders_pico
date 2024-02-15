@@ -21,7 +21,8 @@
 #include "core1_spi.h"
 
 PIO encoders_pio = pio0;
-const uint LED_PIN = PICO_DEFAULT_LED_PIN;
+const uint ON_BOARD_LED_PIN = PICO_DEFAULT_LED_PIN;
+const uint IRQ_TO_REMA = 20;
 
 //
 // ---- quadrature encoder interface example
@@ -48,31 +49,23 @@ quadrature_encoder x(encoders_pio, 0, 10);      // Base pin to connect the A pha
 quadrature_encoder y(encoders_pio, 1, 12);      // The B phase must be connected to the next pin
 quadrature_encoder z(encoders_pio, 2, 14);                                                 
 
+void gpio_callback(uint gpio, uint32_t events) {
+    // Put the GPIO event(s) that just happened into event_str
+    // so we can print it
+    //static bool status = false;
+    gpio_put(IRQ_TO_REMA, 1);
+    //status = !status;
+}
+
 int main() {
     stdio_init_all();
 
-    #if !defined(spi_default) || !defined(PICO_DEFAULT_SPI_SCK_PIN) || !defined(PICO_DEFAULT_SPI_TX_PIN) || !defined(PICO_DEFAULT_SPI_RX_PIN) || !defined(PICO_DEFAULT_SPI_CSN_PIN)
-    #warning spi/spi_slave example requires a board with SPI pins
-        puts("Default SPI pins were not defined");
-    #else
+    gpio_init(ON_BOARD_LED_PIN);
+    gpio_set_dir(ON_BOARD_LED_PIN, GPIO_OUT);
 
-    //Enable SPI 0 at 1 MHz and connect to GPIOs
-    spi_init(spi_default, 1000 * 1000);
+    gpio_init(IRQ_TO_REMA);
+    gpio_set_dir(IRQ_TO_REMA, GPIO_OUT);
 
-    gpio_set_function(PICO_DEFAULT_SPI_RX_PIN, GPIO_FUNC_SPI);
-    gpio_set_function(PICO_DEFAULT_SPI_SCK_PIN, GPIO_FUNC_SPI);
-    gpio_set_function(PICO_DEFAULT_SPI_TX_PIN, GPIO_FUNC_SPI);
-    gpio_set_function(PICO_DEFAULT_SPI_CSN_PIN, GPIO_FUNC_SPI);
-    // Make the SPI pins available to picotool
-    //bi_decl(bi_4pins_with_func(PICO_DEFAULT_SPI_RX_PIN, PICO_DEFAULT_SPI_TX_PIN, PICO_DEFAULT_SPI_SCK_PIN, PICO_DEFAULT_SPI_CSN_PIN, GPIO_FUNC_SPI));
-
-    // THIS LINE IS ABSOLUTELY KEY. Enables multi-byte transfers with one CS assert
-    // Page 537 of the RP2040 Datasheet.
-    spi_set_format(spi_default, 8, SPI_CPOL_1, SPI_CPHA_1, SPI_MSB_FIRST); 
-    spi_set_slave(spi_default, true);    
-
-    gpio_init(LED_PIN);
-    gpio_set_dir(LED_PIN, GPIO_OUT);
 
     // we don't really need to keep the offset, as this program must be loaded
     // at offset 0
@@ -83,7 +76,12 @@ int main() {
     z.init();
 
     multicore_launch_core1(core1_entry);
-
+    
+    for (int x=0; x<8 ; x++) {
+        gpio_set_dir(x, GPIO_IN);
+        gpio_set_irq_enabled_with_callback(x, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
+    }
+    
     while (1) {    
         // printf("x: %d", x.read_from_PIO());
         // printf("y: %d", y.read_from_PIO());
@@ -94,7 +92,6 @@ int main() {
         z.read_from_PIO();
     }
         
-    #endif
 }
 
 
