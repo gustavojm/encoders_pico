@@ -12,7 +12,6 @@ void fill_buf(uint8_t * buf, int value) {
 }
 
 int spi_tx_rx(int current_value){
-    // printf("cv: %d", current_value);
     uint8_t in_buf[4];
     uint8_t buf[4];
     fill_buf(buf, current_value);
@@ -49,20 +48,17 @@ void core1_entry() {
         uint8_t in_buf[1] = {0};
         uint8_t out_buf[12];
 
-        // int prev = z.get_count();
-        // printf("prev %d", prev);
-
         spi_read_blocking(spi_default, 0x00, in_buf, 1);
         uint8_t cmd = in_buf[0];        
-        //printf("Cmd: %x \n", static_cast<int>(cmd));
         
         int current_value;
-        uint8_t limits;
+        uint8_t hard_limits;
         int val;
+        
+        gpio_put(SPI_ERROR_LED, 0);
 
         switch (cmd & quadrature_encoder::CMD_MASK) {
             case quadrature_encoder::COUNTERS:            
-                gpio_put(ON_BOARD_LED_PIN, 0);
                 fill_buf(out_buf, x.get_count());
                 fill_buf(&(out_buf[4]), y.get_count());
                 fill_buf(&(out_buf[8]), z.get_count());
@@ -87,7 +83,6 @@ void core1_entry() {
                 break;
 
             case quadrature_encoder::COUNTER_Z:
-                gpio_put(ON_BOARD_LED_PIN, 0);
                 current_value = z.get_count();
                 val = spi_tx_rx(current_value);
                 if (cmd & quadrature_encoder::WRITE_MASK) {
@@ -139,15 +134,15 @@ void core1_entry() {
 
             case HARD_LIMITS:
                 if (cmd & quadrature_encoder::WRITE_MASK) {
+                    gpio_put(IRQ_TO_REMA, 0);        // The IRQ was acknowledged
                 } else {
-                    limits = gpio_get_all() & 0xFF;
-                    spi_write_blocking(spi_default, &limits, 1);
+                    hard_limits = gpio_get_all() & 0xFF;
+                    spi_write_blocking(spi_default, &hard_limits, 1);
                 }
                 break;
 
             default:               
                 gpio_put(SPI_ERROR_LED, 1);
-                sleep_us(10);       // very important... helps to resync in case of restart of raspberry pi pico 
                 break;
         }
         

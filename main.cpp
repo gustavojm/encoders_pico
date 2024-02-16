@@ -52,11 +52,7 @@ quadrature_encoder y(encoders_pio, 1, 12);      // The B phase must be connected
 quadrature_encoder z(encoders_pio, 2, 14);                                                 
 
 void gpio_callback(uint gpio, uint32_t events) {
-    // Put the GPIO event(s) that just happened into event_str
-    // so we can print it
-    //static bool status = false;
     gpio_put(IRQ_TO_REMA, 1);
-    //status = !status;
 }
 
 int main() {
@@ -76,7 +72,7 @@ int main() {
     pio_add_program(encoders_pio, &quadrature_encoder_program);
 
     x.init();   // this calls quadrature_encoder_program_init that MUST be called after pio_add_program;
-    y.init();   // otherwise will work only after picotool flash or reboot, but not on cold restart // LESSON LEARNED //
+    y.init();   // otherwise will work only after picotool flash or reboot, but not on cold restart ** LESSON LEARNED **
     z.init();
 
     multicore_launch_core1(core1_entry);
@@ -87,10 +83,6 @@ int main() {
     }
     
     while (1) {    
-        // printf("x: %d", x.read_from_PIO());
-        // printf("y: %d", y.read_from_PIO());
-        // printf("z: %d", z.read_from_PIO());
-        
         x.read_from_PIO();        
         y.read_from_PIO();
         z.read_from_PIO();

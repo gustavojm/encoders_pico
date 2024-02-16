@@ -18,11 +18,9 @@ public:
         current_value = val;
         delta = current_value - old_value;
         old_value = current_value;
-        if (current_value > target) {
-            //gpio_put(ON_BOARD_LED_PIN, 1);
-        } else {
-            //gpio_put(ON_BOARD_LED_PIN, 0);
-        }
+        int error = target - current_value;
+        already_there = (abs(error) < POS_THRESHOLD);
+        gpio_put(ON_BOARD_LED_PIN, already_there);
         mutex_exit(&mtx);	
         return val;        
     }
@@ -59,6 +57,7 @@ public:
     int delta = 0;
     int current_value = 0; 
     int target = 125;
+    bool already_there = false;
     int old_value = 0;
 
     static constexpr uint8_t CLEAR_COUNTERS = 0x20;
@@ -81,6 +80,8 @@ public:
 
     static constexpr uint8_t WRITE_MASK = 1<<7;
     static constexpr uint8_t CMD_MASK = 0x7F;
+
+    static constexpr int POS_THRESHOLD = 10;
 };
 
 #endif      // QUADRATURE_ENCODER_H
