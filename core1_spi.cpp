@@ -1,8 +1,8 @@
 #include "core1_spi.h"
 
-#define HARD_LIMITS     0x40
+#define HARD_LIMITS     0x60
 
-extern quadrature_encoder x, y, z;
+extern quadrature_encoder *axes_tbl[];
 
 void fill_buf(uint8_t * buf, int value) {
     buf[0] = static_cast<uint8_t>((value >> 24) & 0xFF);
@@ -42,93 +42,83 @@ void core1_entry() {
     // THIS LINE IS ABSOLUTELY KEY. Enables multi-byte transfers with one CS assert
     // Page 537 of the RP2040 Datasheet.
     spi_set_format(spi_default, 8, SPI_CPOL_1, SPI_CPHA_1, SPI_MSB_FIRST); 
-    spi_set_slave(spi_default, true);    
+    spi_set_slave(spi_default, true);
 
     while (1) {        
-        uint8_t in_buf[1] = {0};
-        uint8_t out_buf[12];
-
-        spi_read_blocking(spi_default, 0x00, in_buf, 1);
-        uint8_t cmd = in_buf[0];        
-        
+        uint8_t in_buf[4] = {0};
+        uint8_t out_buf[16];
+       
         int current_value;
         uint8_t hard_limits;
         int val;
-        
+        quadrature_encoder *axis;
+
         gpio_put(SPI_ERROR_LED, 0);
 
+        spi_read_blocking(spi_default, 0x00, in_buf, 1);
+        uint8_t cmd = in_buf[0];        
         switch (cmd & quadrature_encoder::CMD_MASK) {
             case quadrature_encoder::COUNTERS:            
-                fill_buf(out_buf, x.get_count());
-                fill_buf(&(out_buf[4]), y.get_count());
-                fill_buf(&(out_buf[8]), z.get_count());
-
-                spi_write_blocking(spi_default, out_buf, 12);
-                break;
-
-            case quadrature_encoder::COUNTER_X:
-                current_value = x.get_count();
-                val = spi_tx_rx(current_value);
-                if (cmd & quadrature_encoder::WRITE_MASK) {
-                    x.set_count(val);
-                }
-                break;
-            
-            case quadrature_encoder::COUNTER_Y:
-                current_value = y.get_count();
-                val = spi_tx_rx(current_value);
-                if (cmd & quadrature_encoder::WRITE_MASK) {
-                    x.set_count(val);
-                }
-                break;
-
-            case quadrature_encoder::COUNTER_Z:
-                current_value = z.get_count();
-                val = spi_tx_rx(current_value);
-                if (cmd & quadrature_encoder::WRITE_MASK) {
-                    x.set_count(val);
+                axis = axes_tbl[cmd & 0x0F];
+                if (axis) {
+                    current_value = axis->get_count();
+                    val = spi_tx_rx(current_value);
+                    if (cmd & quadrature_encoder::WRITE_MASK) {
+                        axis->set_count(val);
+                    }
+                } else {        // all axes
+                    fill_buf(out_buf, axes_tbl[1]->get_count());
+                    fill_buf(&(out_buf[4]), axes_tbl[2]->get_count());
+                    fill_buf(&(out_buf[8]), axes_tbl[3]->get_count());
+                    fill_buf(&(out_buf[12]), axes_tbl[4]->get_count());
+                    spi_write_blocking(spi_default, out_buf, 16);                    
                 }
                 break;
 
             case quadrature_encoder::CLEAR_COUNTERS:
-                x.set_count(0);
-                y.set_count(0);
-                z.set_count(0);
-                break;
-
-            case quadrature_encoder::CLEAR_COUNTER_X:
-                x.set_count(0);
-                break;
-
-            case quadrature_encoder::CLEAR_COUNTER_Y:
-                y.set_count(0);
-                break;
-
-            case quadrature_encoder::CLEAR_COUNTER_Z:
-                z.set_count(0);
-                break;
-
-            case quadrature_encoder::TARGET_X:
-                current_value = x.get_target();
-                val = spi_tx_rx(current_value);
-                if (cmd & quadrature_encoder::WRITE_MASK) {
-                    x.set_target(val);
+                axis = axes_tbl[cmd & 0x0F];
+                if (axis) {
+                    axis->set_count(0);
+                } else {
+                    axes_tbl[1]->set_count(0);
+                    axes_tbl[2]->set_count(0);
+                    axes_tbl[3]->set_count(0);
+                    axes_tbl[4]->set_count(0);
                 }
                 break;
 
-            case quadrature_encoder::TARGET_Y:
-                current_value = y.get_target();
-                val = spi_tx_rx(current_value);
-                if (cmd & quadrature_encoder::WRITE_MASK) {
-                    y.set_target(val);
+            case quadrature_encoder::TARGETS:
+                axis = axes_tbl[cmd & 0x0F];
+                if (axis) {
+                    current_value = axis->get_target();
+                    val = spi_tx_rx(current_value);
+                    if (cmd & quadrature_encoder::WRITE_MASK) {
+                        axis->set_target(val);
+                    }
                 }
                 break;
 
-            case quadrature_encoder::TARGET_Z:
-                current_value = z.get_target();
-                val = spi_tx_rx(current_value);
-                if (cmd & quadrature_encoder::WRITE_MASK) {
-                    z.set_target(val);
+            case quadrature_encoder::POS_THRESHOLDS:            // Same threshold for all axes
+                axis = axes_tbl[cmd & 0x0F];
+                if (axis) {
+                    current_value = axis->get_pos_threshold();
+                    val = spi_tx_rx(current_value);
+                    if (cmd & quadrature_encoder::WRITE_MASK) {
+                        axis->set_pos_threshold(val);
+                    }
+                } else {
+                    if (cmd & quadrature_encoder::WRITE_MASK) {
+                        spi_read_blocking(spi_default, 0x00, in_buf, 4);
+                        int threshold = static_cast<int>(in_buf[0] << 24) |
+                                        static_cast<int>(in_buf[1] << 16) |
+                                        static_cast<int>(in_buf[2] << 8) |
+                                        static_cast<int>(in_buf[3] << 0);
+
+                        axes_tbl[1]->set_pos_threshold(threshold);
+                        axes_tbl[2]->set_pos_threshold(threshold);
+                        axes_tbl[3]->set_pos_threshold(threshold);
+                        axes_tbl[4]->set_pos_threshold(threshold);
+                    }
                 }
                 break;
 

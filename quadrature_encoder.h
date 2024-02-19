@@ -19,7 +19,7 @@ public:
         delta = current_value - old_value;
         old_value = current_value;
         int error = target - current_value;
-        already_there = (abs(error) < POS_THRESHOLD);
+        already_there = (abs(error) < pos_threshold);
         gpio_put(ON_BOARD_LED_PIN, already_there);
         mutex_exit(&mtx);	
         return val;        
@@ -46,6 +46,15 @@ public:
         return target;
     }
 
+    int get_pos_threshold() {
+        return pos_threshold;
+    }
+
+    void set_pos_threshold(int val) {
+        pos_threshold = val;
+    }
+    
+
     void init() {
         quadrature_encoder_program_init(pio, sm, PIN_AB, 0);
     }
@@ -57,6 +66,7 @@ public:
     int delta = 0;
     int current_value = 0; 
     int target = 125;
+    int pos_threshold = 125;
     bool already_there = false;
     int old_value = 0;
 
@@ -78,10 +88,14 @@ public:
     static constexpr uint8_t TARGET_Z = TARGETS + 3;
     static constexpr uint8_t TARGET_W = TARGETS + 4;
 
-    static constexpr uint8_t WRITE_MASK = 1<<7;
-    static constexpr uint8_t CMD_MASK = 0x7F;
+    static constexpr uint8_t POS_THRESHOLDS = 0x50;
+    static constexpr uint8_t POS_THRESHOLD_X = POS_THRESHOLDS + 1;
+    static constexpr uint8_t POS_THRESHOLD_Y = POS_THRESHOLDS + 2;
+    static constexpr uint8_t POS_THRESHOLD_Z = POS_THRESHOLDS + 3;
+    static constexpr uint8_t POS_THRESHOLD_W = POS_THRESHOLDS + 4;
 
-    static constexpr int POS_THRESHOLD = 10;
+    static constexpr uint8_t WRITE_MASK = 1<<7;
+    static constexpr uint8_t CMD_MASK = 0x70;
 };
 
 #endif      // QUADRATURE_ENCODER_H

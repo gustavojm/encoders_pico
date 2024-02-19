@@ -47,9 +47,12 @@ const uint SPI_ERROR_LED = 21;
 // encoder count updated and because of that it supports very high step rates.
 //
 
-quadrature_encoder x(encoders_pio, 0, 10);      // Base pin to connect the A phase of the encoder.                                                    
-quadrature_encoder y(encoders_pio, 1, 12);      // The B phase must be connected to the next pin
-quadrature_encoder z(encoders_pio, 2, 14);                                                 
+quadrature_encoder x(encoders_pio, 0, 8);      // Base pin to connect the A phase of the encoder.                                                    
+quadrature_encoder y(encoders_pio, 1, 10);     // The B phase must be connected to the next pin
+quadrature_encoder z(encoders_pio, 2, 12);                                                 
+quadrature_encoder w(encoders_pio, 3, 14);                                                 
+
+quadrature_encoder *axes_tbl[5] = {nullptr, &x, &y, &z, &w};
 
 void gpio_callback(uint gpio, uint32_t events) {
     gpio_put(IRQ_TO_REMA, 1);
@@ -74,6 +77,7 @@ int main() {
     x.init();   // this calls quadrature_encoder_program_init that MUST be called after pio_add_program;
     y.init();   // otherwise will work only after picotool flash or reboot, but not on cold restart ** LESSON LEARNED **
     z.init();
+    w.init();
 
     multicore_launch_core1(core1_entry);
     
@@ -86,6 +90,7 @@ int main() {
         x.read_from_PIO();        
         y.read_from_PIO();
         z.read_from_PIO();
+        w.read_from_PIO();
     }
         
 }
