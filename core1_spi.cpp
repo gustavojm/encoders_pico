@@ -1,6 +1,6 @@
 #include "core1_spi.h"
 
-#define HARD_LIMITS     0x60
+#define LIMITS     0x60
 
 extern quadrature_encoder *axes_tbl[];
 
@@ -122,12 +122,11 @@ void core1_entry() {
                 }
                 break;
 
-            case HARD_LIMITS:
+            case LIMITS:
+                hard_limits = gpio_get_all() & 0xFF;
+                spi_write_blocking(spi_default, &hard_limits, 1);
                 if (cmd & quadrature_encoder::WRITE_MASK) {
                     gpio_put(IRQ_TO_REMA, 0);        // The IRQ was acknowledged
-                } else {
-                    hard_limits = gpio_get_all() & 0xFF;
-                    spi_write_blocking(spi_default, &hard_limits, 1);
                 }
                 break;
 
