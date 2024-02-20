@@ -19,8 +19,6 @@ public:
 
         mutex_enter_blocking(&mtx);
         current_value = val;
-        delta = current_value - old_value;
-        old_value = current_value;
         int error = target - current_value;
         already_there = (abs(error) < pos_threshold);        
         uint8_t targets_new = already_there ? (targets_reached | 1 << sm) : (targets_reached & ~(1 << sm));
@@ -46,8 +44,9 @@ public:
         mutex_exit(&mtx);        
     }
 
-    void set_target(int val) {
+    void set_target(int val) {        
         target = val;
+        //printf("target: %d \n", target);
     }
 
     int get_target() {
@@ -60,6 +59,7 @@ public:
 
     void set_pos_threshold(int val) {
         pos_threshold = val;
+        //printf("%d \n", pos_threshold);
     }
     
 
@@ -71,12 +71,10 @@ public:
     PIO pio;
     int sm;
     uint PIN_AB;
-    int delta = 0;
-    int current_value = 0; 
-    int target = 125;
-    int pos_threshold = 125;
+    volatile int current_value = 0; 
+    int target = 0;
+    int pos_threshold = 1;
     bool already_there = false;
-    int old_value = 0;
 };
 
 #endif      // QUADRATURE_ENCODER_H

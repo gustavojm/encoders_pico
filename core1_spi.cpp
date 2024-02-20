@@ -107,16 +107,12 @@ void core1_entry() {
                     }
                 } else {
                     if (cmd & quadrature_encoder_constants::WRITE_MASK) {
-                        spi_read_blocking(spi_default, 0x00, in_buf, 4);
-                        int threshold = static_cast<int>(in_buf[0] << 24) |
-                                        static_cast<int>(in_buf[1] << 16) |
-                                        static_cast<int>(in_buf[2] << 8) |
-                                        static_cast<int>(in_buf[3] << 0);
-
-                        axes_tbl[1]->set_pos_threshold(threshold);
-                        axes_tbl[2]->set_pos_threshold(threshold);
-                        axes_tbl[3]->set_pos_threshold(threshold);
-                        axes_tbl[4]->set_pos_threshold(threshold);
+                        current_value = 0x00;
+                        val = spi_tx_rx(current_value);
+                        axes_tbl[1]->set_pos_threshold(val);
+                        axes_tbl[2]->set_pos_threshold(val);
+                        axes_tbl[3]->set_pos_threshold(val);
+                        axes_tbl[4]->set_pos_threshold(val);
                     }
                 }
                 break;

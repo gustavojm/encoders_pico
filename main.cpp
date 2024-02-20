@@ -83,7 +83,7 @@ int main() {
     
     for (int x=0; x<8 ; x++) {
         gpio_set_dir(x, GPIO_IN);
-        gpio_set_irq_enabled_with_callback(x, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
+        gpio_set_irq_enabled_with_callback(x, GPIO_IRQ_EDGE_RISE, true, &gpio_callback);
     }
     
     while (1) {    
