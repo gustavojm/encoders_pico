@@ -1,9 +1,12 @@
 #ifndef QUADRATURE_ENCODER_H
 #define QUADRATURE_ENCODER_H
 
+#include "quadrature_encoder_constants.h"
 #include "quadrature_encoder.pio.h"
 
 extern const uint ON_BOARD_LED_PIN;
+extern const uint IRQ_TO_REMA;
+extern uint8_t targets_reached;
 
 class quadrature_encoder {
 public:
@@ -19,7 +22,12 @@ public:
         delta = current_value - old_value;
         old_value = current_value;
         int error = target - current_value;
-        already_there = (abs(error) < pos_threshold);
+        already_there = (abs(error) < pos_threshold);        
+        uint8_t targets_new = already_there ? (targets_reached | 1 << sm) : (targets_reached & ~(1 << sm));
+        if (targets_new > targets_reached) {
+            gpio_put(IRQ_TO_REMA, 1);          
+        }                        
+        targets_reached = targets_new;
         gpio_put(ON_BOARD_LED_PIN, already_there);
         mutex_exit(&mtx);	
         return val;        
@@ -69,33 +77,6 @@ public:
     int pos_threshold = 125;
     bool already_there = false;
     int old_value = 0;
-
-    static constexpr uint8_t CLEAR_COUNTERS = 0x20;
-    static constexpr uint8_t CLEAR_COUNTER_X = CLEAR_COUNTERS + 1;
-    static constexpr uint8_t CLEAR_COUNTER_Y = CLEAR_COUNTERS + 2;
-    static constexpr uint8_t CLEAR_COUNTER_Z = CLEAR_COUNTERS + 3;
-    static constexpr uint8_t CLEAR_COUNTER_W = CLEAR_COUNTERS + 4;
-
-    static constexpr uint8_t COUNTERS = 0x30;
-    static constexpr uint8_t COUNTER_X = COUNTERS + 1;
-    static constexpr uint8_t COUNTER_Y = COUNTERS + 2;
-    static constexpr uint8_t COUNTER_Z = COUNTERS + 3;
-    static constexpr uint8_t COUNTER_W = COUNTERS + 4;
-
-    static constexpr uint8_t TARGETS = 0x40;
-    static constexpr uint8_t TARGET_X = TARGETS + 1;
-    static constexpr uint8_t TARGET_Y = TARGETS + 2;
-    static constexpr uint8_t TARGET_Z = TARGETS + 3;
-    static constexpr uint8_t TARGET_W = TARGETS + 4;
-
-    static constexpr uint8_t POS_THRESHOLDS = 0x50;
-    static constexpr uint8_t POS_THRESHOLD_X = POS_THRESHOLDS + 1;
-    static constexpr uint8_t POS_THRESHOLD_Y = POS_THRESHOLDS + 2;
-    static constexpr uint8_t POS_THRESHOLD_Z = POS_THRESHOLDS + 3;
-    static constexpr uint8_t POS_THRESHOLD_W = POS_THRESHOLDS + 4;
-
-    static constexpr uint8_t WRITE_MASK = 1<<7;
-    static constexpr uint8_t CMD_MASK = 0x70;
 };
 
 #endif      // QUADRATURE_ENCODER_H

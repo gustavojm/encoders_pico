@@ -1,8 +1,7 @@
 #include "core1_spi.h"
 
-#define LIMITS     0x60
-
 extern quadrature_encoder *axes_tbl[];
+uint8_t targets_reached;
 
 void fill_buf(uint8_t * buf, int value) {
     buf[0] = static_cast<uint8_t>((value >> 24) & 0xFF);
@@ -57,13 +56,13 @@ void core1_entry() {
 
         spi_read_blocking(spi_default, 0x00, in_buf, 1);
         uint8_t cmd = in_buf[0];        
-        switch (cmd & quadrature_encoder::CMD_MASK) {
-            case quadrature_encoder::COUNTERS:            
+        switch (cmd & quadrature_encoder_constants::CMD_MASK) {
+            case quadrature_encoder_constants::COUNTERS:
                 axis = axes_tbl[cmd & 0x0F];
                 if (axis) {
                     current_value = axis->get_count();
                     val = spi_tx_rx(current_value);
-                    if (cmd & quadrature_encoder::WRITE_MASK) {
+                    if (cmd & quadrature_encoder_constants::WRITE_MASK) {
                         axis->set_count(val);
                     }
                 } else {        // all axes
@@ -75,7 +74,7 @@ void core1_entry() {
                 }
                 break;
 
-            case quadrature_encoder::CLEAR_COUNTERS:
+            case quadrature_encoder_constants::CLEAR_COUNTERS:
                 axis = axes_tbl[cmd & 0x0F];
                 if (axis) {
                     axis->set_count(0);
@@ -87,27 +86,27 @@ void core1_entry() {
                 }
                 break;
 
-            case quadrature_encoder::TARGETS:
+            case quadrature_encoder_constants::TARGETS:
                 axis = axes_tbl[cmd & 0x0F];
                 if (axis) {
                     current_value = axis->get_target();
                     val = spi_tx_rx(current_value);
-                    if (cmd & quadrature_encoder::WRITE_MASK) {
+                    if (cmd & quadrature_encoder_constants::WRITE_MASK) {
                         axis->set_target(val);
                     }
                 }
                 break;
 
-            case quadrature_encoder::POS_THRESHOLDS:            // Same threshold for all axes
+            case quadrature_encoder_constants::POS_THRESHOLDS:            // Same threshold for all axes
                 axis = axes_tbl[cmd & 0x0F];
                 if (axis) {
                     current_value = axis->get_pos_threshold();
                     val = spi_tx_rx(current_value);
-                    if (cmd & quadrature_encoder::WRITE_MASK) {
+                    if (cmd & quadrature_encoder_constants::WRITE_MASK) {
                         axis->set_pos_threshold(val);
                     }
                 } else {
-                    if (cmd & quadrature_encoder::WRITE_MASK) {
+                    if (cmd & quadrature_encoder_constants::WRITE_MASK) {
                         spi_read_blocking(spi_default, 0x00, in_buf, 4);
                         int threshold = static_cast<int>(in_buf[0] << 24) |
                                         static_cast<int>(in_buf[1] << 16) |
@@ -122,10 +121,14 @@ void core1_entry() {
                 }
                 break;
 
-            case LIMITS:
+            case quadrature_encoder_constants::LIMITS:
                 hard_limits = gpio_get_all() & 0xFF;
-                spi_write_blocking(spi_default, &hard_limits, 1);
-                if (cmd & quadrature_encoder::WRITE_MASK) {
+                out_buf[0] = hard_limits;
+                out_buf[1] = targets_reached;
+                out_buf[2] = 0x00;
+                out_buf[3] = 0x00;
+                spi_write_blocking(spi_default, out_buf, 4);
+                if (cmd & quadrature_encoder_constants::WRITE_MASK) {
                     gpio_put(IRQ_TO_REMA, 0);        // The IRQ was acknowledged
                 }
                 break;

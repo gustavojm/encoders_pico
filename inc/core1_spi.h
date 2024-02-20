@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <cstdint>
 #include <mutex>
 #include "pico/binary_info.h"
 #include "pico/multicore.h"
