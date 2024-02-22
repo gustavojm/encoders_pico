@@ -47,12 +47,12 @@ const uint SPI_ERROR_LED = 21;
 // encoder count updated and because of that it supports very high step rates.
 //
 
-quadrature_encoder x(encoders_pio, 0, 8);      // Base pin to connect the A phase of the encoder.                                                    
-quadrature_encoder y(encoders_pio, 1, 10);     // The B phase must be connected to the next pin
-quadrature_encoder z(encoders_pio, 2, 12);                                                 
-quadrature_encoder w(encoders_pio, 3, 14);                                                 
+quadrature_encoder x(encoders_pio, 0, 8, 26);      // Base pin to connect the A phase of the encoder.                                                    
+quadrature_encoder y(encoders_pio, 1, 10, 27);     // The B phase must be connected to the next pin
+quadrature_encoder z(encoders_pio, 2, 12, 28);                                                 
+quadrature_encoder w(encoders_pio, 3, 14, 255);                                                 
 
-quadrature_encoder *axes_tbl[5] = {nullptr, &x, &y, &z, &w};
+quadrature_encoder *axes_tbl[8] = {nullptr, &x, &y, &z, &w, nullptr, nullptr, nullptr};
 
 void gpio_callback(uint gpio, uint32_t events) {
     gpio_put(IRQ_TO_REMA, 1);

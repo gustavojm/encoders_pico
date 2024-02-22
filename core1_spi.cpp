@@ -25,7 +25,7 @@ void core1_entry() {
     #else
 
     //Enable SPI 0 at 1 MHz and connect to GPIOs
-    spi_init(spi_default, 1000 * 1000);
+    spi_init(spi_default, 5000 * 1000);
 
     gpio_set_function(PICO_DEFAULT_SPI_RX_PIN, GPIO_FUNC_SPI);
     gpio_set_function(PICO_DEFAULT_SPI_SCK_PIN, GPIO_FUNC_SPI);
@@ -52,13 +52,13 @@ void core1_entry() {
         int val;
         quadrature_encoder *axis;
 
-        gpio_put(SPI_ERROR_LED, 0);
+        //gpio_put(SPI_ERROR_LED, 0);
 
         spi_read_blocking(spi_default, 0x00, in_buf, 1);
         uint8_t cmd = in_buf[0];        
         switch (cmd & quadrature_encoder_constants::CMD_MASK) {
             case quadrature_encoder_constants::COUNTERS:
-                axis = axes_tbl[cmd & 0x0F];
+                axis = axes_tbl[cmd & quadrature_encoder_constants::AXIS_MASK];
                 if (axis) {
                     current_value = axis->get_count();
                     val = spi_tx_rx(current_value);
@@ -75,7 +75,7 @@ void core1_entry() {
                 break;
 
             case quadrature_encoder_constants::CLEAR_COUNTERS:
-                axis = axes_tbl[cmd & 0x0F];
+                axis = axes_tbl[cmd & quadrature_encoder_constants::AXIS_MASK];
                 if (axis) {
                     axis->set_count(0);
                 } else {
@@ -87,7 +87,7 @@ void core1_entry() {
                 break;
 
             case quadrature_encoder_constants::TARGETS:
-                axis = axes_tbl[cmd & 0x0F];
+                axis = axes_tbl[cmd & quadrature_encoder_constants::AXIS_MASK];
                 if (axis) {
                     current_value = axis->get_target();
                     val = spi_tx_rx(current_value);
@@ -98,7 +98,7 @@ void core1_entry() {
                 break;
 
             case quadrature_encoder_constants::POS_THRESHOLDS:            // Same threshold for all axes
-                axis = axes_tbl[cmd & 0x0F];
+                axis = axes_tbl[cmd & quadrature_encoder_constants::AXIS_MASK];
                 if (axis) {
                     current_value = axis->get_pos_threshold();
                     val = spi_tx_rx(current_value);
@@ -116,6 +116,18 @@ void core1_entry() {
                     }
                 }
                 break;
+
+            case quadrature_encoder_constants::DIRECTIONS:
+                axis = axes_tbl[cmd & quadrature_encoder_constants::AXIS_MASK];
+                if (axis) {                    
+                    current_value = 0;
+                    val = spi_tx_rx(current_value);
+                    if (cmd & quadrature_encoder_constants::WRITE_MASK) {
+                        axis->set_direction(val);
+                    }
+                }
+                break;
+
 
             case quadrature_encoder_constants::LIMITS:
                 hard_limits = gpio_get_all() & 0xFF;

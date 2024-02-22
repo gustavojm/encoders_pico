@@ -10,7 +10,11 @@ extern uint8_t targets_reached;
 
 class quadrature_encoder {
 public:
-    quadrature_encoder(PIO pio, int sm, uint PIN_AB) : pio(pio), sm(sm), PIN_AB(PIN_AB) {
+    quadrature_encoder(PIO pio, int sm, uint PIN_AB, uint PIN_DIR) : pio(pio), sm(sm), PIN_AB(PIN_AB), PIN_DIR(PIN_DIR) {
+        if (PIN_DIR > 0 && PIN_DIR < 29) {
+            gpio_init(PIN_DIR);
+            gpio_set_dir(PIN_DIR, GPIO_OUT);
+        }
         mutex_init(&mtx);   
     }
 
@@ -62,6 +66,12 @@ public:
         //printf("%d \n", pos_threshold);
     }
     
+    void set_direction(bool dir) {
+        if (PIN_DIR > 0 && PIN_DIR < 29) {
+            gpio_put(PIN_DIR, dir);
+        }
+        //printf("%d \n", pos_threshold);
+    }
 
     void init() {
         quadrature_encoder_program_init(pio, sm, PIN_AB, 0);
@@ -71,6 +81,7 @@ public:
     PIO pio;
     int sm;
     uint PIN_AB;
+    uint PIN_DIR;
     volatile int current_value = 0; 
     int target = 0;
     int pos_threshold = 1;

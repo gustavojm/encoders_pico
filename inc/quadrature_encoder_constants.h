@@ -28,10 +28,17 @@ namespace quadrature_encoder_constants {
     static constexpr uint8_t POS_THRESHOLD_Z = POS_THRESHOLDS + 3;
     static constexpr uint8_t POS_THRESHOLD_W = POS_THRESHOLDS + 4;
 
+    static constexpr uint8_t DIRECTIONS = 0x60;
+    static constexpr uint8_t DIRECTION_X = DIRECTIONS + 1;
+    static constexpr uint8_t DIRECTION_Y = DIRECTIONS + 2;
+    static constexpr uint8_t DIRECTION_Z = DIRECTIONS + 3;
+    static constexpr uint8_t DIRECTION_W = DIRECTIONS + 4;
+
     static constexpr uint8_t WRITE_MASK = 1<<7;
     static constexpr uint8_t CMD_MASK = 0x70;
+    static constexpr uint8_t AXIS_MASK = 0x07;
 
-    static constexpr uint8_t LIMITS = 0x60;
+    static constexpr uint8_t LIMITS = 0x70;
 }
 
 #endif      // QUADRATURE_ENCODER_CONSTANTS_H
