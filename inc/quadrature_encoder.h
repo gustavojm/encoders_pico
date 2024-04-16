@@ -19,10 +19,9 @@ public:
     }
 
     int read_from_PIO() {
-        int val = quadrature_encoder_get_count(pio, sm);
-
         mutex_enter_blocking(&mtx);
-        current_value = val;
+        int val = quadrature_encoder_get_count(pio, sm);
+        current_value = val + offset;
         int error = target - current_value;
         already_there = (abs(error) < pos_threshold);        
         uint8_t targets_new = already_there ? (targets_reached | 1 << sm) : (targets_reached & ~(1 << sm));
@@ -44,7 +43,8 @@ public:
 
     void set_count(int val) {
         mutex_enter_blocking(&mtx);
-        current_value = val;
+        offset += (val - current_value);
+        //printf("sc: %d \n", offset);
         mutex_exit(&mtx);        
     }
 

@@ -24,7 +24,7 @@ void core1_entry() {
         puts("Default SPI pins were not defined");
     #else
 
-    //Enable SPI 0 at 1 MHz and connect to GPIOs
+    //Enable SPI 0 at 5 MHz and connect to GPIOs
     spi_init(spi_default, 5000 * 1000);
 
     gpio_set_function(PICO_DEFAULT_SPI_RX_PIN, GPIO_FUNC_SPI);
@@ -63,14 +63,9 @@ void core1_entry() {
                     current_value = axis->get_count();
                     val = spi_tx_rx(current_value);
                     if (cmd & quadrature_encoder_constants::WRITE_MASK) {
+                        //printf("sc: %d \n", val);
                         axis->set_count(val);
                     }
-                } else {        // all axes
-                    fill_buf(out_buf, axes_tbl[1]->get_count());
-                    fill_buf(&(out_buf[4]), axes_tbl[2]->get_count());
-                    fill_buf(&(out_buf[8]), axes_tbl[3]->get_count());
-                    fill_buf(&(out_buf[12]), axes_tbl[4]->get_count());
-                    spi_write_blocking(spi_default, out_buf, 16);                    
                 }
                 break;
 
