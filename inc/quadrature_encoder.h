@@ -23,7 +23,7 @@ public:
         int val = quadrature_encoder_get_count(pio, sm);
         current_value = val + offset;
         int error = target - current_value;
-        already_there = (abs(error) < pos_threshold);        
+        already_there = (std::abs(error) < pos_threshold);        
         uint8_t targets_new = already_there ? (targets_reached | 1 << sm) : (targets_reached & ~(1 << sm));
         if (targets_new > targets_reached) {
             gpio_put(IRQ_TO_REMA, 1);          
@@ -83,6 +83,7 @@ public:
     uint PIN_AB;
     uint PIN_DIR;
     volatile int current_value = 0; 
+    int offset;
     int target = 0;
     int pos_threshold = 1;
     bool already_there = false;
