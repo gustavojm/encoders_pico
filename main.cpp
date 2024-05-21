@@ -70,6 +70,12 @@ int main() {
     gpio_init(SPI_ERROR_LED);
     gpio_set_dir(SPI_ERROR_LED, GPIO_OUT);
 
+    for (int hard_limit_input_pin = 0; hard_limit_input_pin < 8; hard_limit_input_pin++) {
+        gpio_init(hard_limit_input_pin);
+        gpio_disable_pulls(hard_limit_input_pin);
+        gpio_set_irq_enabled_with_callback(hard_limit_input_pin, GPIO_IRQ_EDGE_RISE, true, &gpio_callback);
+    }    
+
     // we don't really need to keep the offset, as this program must be loaded
     // at offset 0
     pio_add_program(encoders_pio, &quadrature_encoder_program);
@@ -80,12 +86,7 @@ int main() {
     w.init();
 
     multicore_launch_core1(core1_entry);
-    
-    for (int x=0; x<8 ; x++) {
-        gpio_set_dir(x, GPIO_IN);
-        gpio_set_irq_enabled_with_callback(x, GPIO_IRQ_EDGE_RISE, true, &gpio_callback);
-    }
-    
+      
     while (1) {    
         x.read_from_PIO();        
         y.read_from_PIO();
