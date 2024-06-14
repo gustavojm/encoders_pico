@@ -130,7 +130,7 @@ void core1_entry() {
             break;
 
         case quadrature_encoder_constants::LIMITS:
-            hard_limits = gpio_get_all() & 0xFF;
+            hard_limits = (gpio_get_all() ^ 0x7F) & 0x7F;  // Invert and mask out spare input
             out_buf[0] = hard_limits;
             out_buf[1] = targets_reached;
             out_buf[2] = 0x00;

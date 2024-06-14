@@ -73,7 +73,7 @@ int main() {
     for (int hard_limit_input_pin = 0; hard_limit_input_pin < 8; hard_limit_input_pin++) {
         gpio_init(hard_limit_input_pin);
         gpio_disable_pulls(hard_limit_input_pin);
-        gpio_set_irq_enabled_with_callback(hard_limit_input_pin, GPIO_IRQ_EDGE_RISE, true, &gpio_callback);
+        gpio_set_irq_enabled_with_callback(hard_limit_input_pin, GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
     }    
 
     // we don't really need to keep the offset, as this program must be loaded
