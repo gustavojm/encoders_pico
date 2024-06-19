@@ -6,7 +6,7 @@
         {
             "label": "Copy Quadrature Encoder",
             "type": "shell",
-            "command": "picotool load -f ~/pico/encoders/build/quadrature_encoders.uf2",
+            "command": "picotool load -f ./build/quadrature_encoders.uf2",
             "group": {
                 "kind": "build",
                 "isDefault": true
