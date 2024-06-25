@@ -7,6 +7,7 @@
 extern const uint ON_BOARD_LED_PIN;
 extern const uint IRQ_TO_REMA;
 extern uint8_t targets_reached;
+extern volatile uint64_t last_interrupt_time;
 
 class quadrature_encoder {
 public:
@@ -50,6 +51,8 @@ public:
 
     void set_target(int val) {        
         target = val;
+
+        last_interrupt_time = time_us_64(); // To ignore bouncing of hard limits when a new movement is starting
         //printf("target: %d \n", target);
     }
 

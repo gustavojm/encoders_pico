@@ -54,8 +54,19 @@ quadrature_encoder w(encoders_pio, 3, 14, 255);
 
 quadrature_encoder *axes_tbl[8] = {nullptr, &x, &y, &z, &w, nullptr, nullptr, nullptr};
 
+// Define debounce time in microseconds (e.g., 100 ms)
+const uint64_t DEBOUNCE_TIME_US = 100000;
+
+volatile uint64_t last_interrupt_time = 0;
+
 void gpio_callback(uint gpio, uint32_t events) {
-    gpio_put(IRQ_TO_REMA, 1);
+    uint64_t current_time = time_us_64();
+
+    if (current_time - last_interrupt_time > DEBOUNCE_TIME_US) {
+        // Update the last interrupt time
+        last_interrupt_time = current_time;
+        gpio_put(IRQ_TO_REMA, 1);
+    }
 }
 
 int main() {
