@@ -6,7 +6,7 @@
 
 extern const uint ON_BOARD_LED_PIN;
 extern const uint IRQ_TO_REMA;
-extern uint8_t targets_reached;
+extern volatile uint8_t targets_reached;
 extern volatile uint64_t last_interrupt_time;
 
 class quadrature_encoder {

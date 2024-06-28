@@ -1,7 +1,7 @@
 #include "core1_spi.h"
 
 extern quadrature_encoder *axes_tbl[];
-uint8_t targets_reached;
+volatile uint8_t targets_reached;
 
 void fill_buf(uint8_t *buf, int value) {
     buf[0] = static_cast<uint8_t>((value >> 24) & 0xFF);
