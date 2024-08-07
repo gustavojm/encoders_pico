@@ -23,13 +23,12 @@ public:
         int val = quadrature_encoder_get_count(pio, sm);
         current_value = val + offset;
         int error = target - current_value;
-        already_there = (std::abs(error) < pos_threshold);        
+        bool already_there = (std::abs(error) < pos_threshold);        
         uint8_t targets_new = already_there ? (targets_reached | 1 << sm) : (targets_reached & ~(1 << sm));
         if (targets_new > targets_reached) {
             gpio_put(IRQ_TO_REMA, 1);          
         }                        
         targets_reached = targets_new;
-        gpio_put(ON_BOARD_LED_PIN, already_there);
         mutex_exit(&mtx);	
         return val;        
     }
@@ -45,12 +44,17 @@ public:
         mutex_enter_blocking(&mtx);
         offset += (val - current_value);
         //printf("sc: %d \n", offset);
-        mutex_exit(&mtx);        
+        mutex_exit(&mtx);
     }
 
-    void set_target(int val) {        
+    void set_target(int val) {
+        mutex_enter_blocking(&mtx);   
         target = val;
-        //printf("target: %d \n", target);
+        // if (sm==1) {
+        //     printf("TARGET: %d\n", target);
+        //     printf("c: %d\n", current_value);
+        // }
+        mutex_exit(&mtx);
     }
 
     int get_target() {
@@ -83,10 +87,9 @@ public:
     uint PIN_AB;
     uint PIN_DIR;
     volatile int current_value = 0; 
-    int offset;
-    int target = 0;
-    int pos_threshold = 1;
-    bool already_there = false;
+    volatile int offset;
+    volatile int target = 0;
+    volatile int pos_threshold = 1;
 };
 
 #endif      // QUADRATURE_ENCODER_H
