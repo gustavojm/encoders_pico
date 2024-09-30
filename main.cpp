@@ -25,6 +25,7 @@ const uint ON_BOARD_LED_PIN = PICO_DEFAULT_LED_PIN;
 
 const uint IRQ_TO_REMA = 20;
 const uint SPI_ERROR_LED = 21;
+const uint SERVO_PIN = 7;
 
 //
 // ---- quadrature encoder interface example
@@ -54,6 +55,8 @@ quadrature_encoder w(encoders_pio, 3, 14, 255);
 
 quadrature_encoder *axes_tbl[8] = {nullptr, &x, &y, &z, &w, nullptr, nullptr, nullptr};
 
+pwm_servo servo(SERVO_PIN);
+
 void gpio_callback(uint gpio, uint32_t events) {
     gpio_put(IRQ_TO_REMA, 1);
 }
@@ -70,7 +73,8 @@ int main() {
     gpio_init(SPI_ERROR_LED);
     gpio_set_dir(SPI_ERROR_LED, GPIO_OUT);
 
-    for (int hard_limit_input_pin = 0; hard_limit_input_pin < 8; hard_limit_input_pin++) {
+
+    for (int hard_limit_input_pin = 0; hard_limit_input_pin < 7; hard_limit_input_pin++) {
         gpio_init(hard_limit_input_pin);
         #ifdef WITHOUT_PONCHO
            gpio_pull_down(hard_limit_input_pin);

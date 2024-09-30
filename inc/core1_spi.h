@@ -1,5 +1,4 @@
-#ifndef CORE1_SPI_H
-#define CORE1_SPI_H
+#pragma once
 
 #include <cstdint>
 #include <hardware/spi.h>
@@ -15,10 +14,10 @@
 #include <pico/stdlib.h>
 
 #include "quadrature_encoder.h"
+#include "pwm_servo.h"
 
 void core1_entry();
 
 extern const uint IRQ_TO_REMA;
 extern const uint SPI_ERROR_LED;
-
-#endif // CORE1_SPI_H
+extern pwm_servo servo;

@@ -29,6 +29,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         pico_multicore
         hardware_pio
         hardware_spi
+        hardware_pwm
         )
 
 target_compile_definitions(${PROJECT_NAME}
@@ -36,7 +37,7 @@ target_compile_definitions(${PROJECT_NAME}
         PUBLIC PICO_DEFAULT_SPI_SCK_PIN=18
         PUBLIC PICO_DEFAULT_SPI_TX_PIN=19
         PUBLIC PICO_DEFAULT_SPI_CSN_PIN=17
-        PUBLIC WITHOUT_PONCHO
+        #PUBLIC WITHOUT_PONCHO
         )
   
 

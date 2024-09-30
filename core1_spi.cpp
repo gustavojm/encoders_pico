@@ -63,6 +63,14 @@ void core1_entry() {
         spi_read_blocking(spi_default, 0x00, in_buf, 1);
         uint8_t cmd = in_buf[0];
         switch (cmd & quadrature_encoder_constants::CMD_MASK) {
+
+        case quadrature_encoder_constants::PWM_SERVO:
+                val = spi_tx_rx(current_value);
+                if (cmd & quadrature_encoder_constants::WRITE_MASK) {
+                    servo.set_angle(val);
+                }
+            break;
+
         case quadrature_encoder_constants::COUNTERS:
             axis = axes_tbl[cmd & quadrature_encoder_constants::AXIS_MASK];
             if (axis) {

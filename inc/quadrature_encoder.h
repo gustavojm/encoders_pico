@@ -1,5 +1,4 @@
-#ifndef QUADRATURE_ENCODER_H
-#define QUADRATURE_ENCODER_H
+#pragma once
 
 #include "quadrature_encoder_constants.h"
 #include "quadrature_encoder.pio.h"
@@ -91,5 +90,3 @@ public:
     volatile int target = 0;
     volatile int pos_threshold = 1;
 };
-
-#endif      // QUADRATURE_ENCODER_H

@@ -1,9 +1,10 @@
-#ifndef QUADRATURE_ENCODER_CONSTANTS_H
-#define QUADRATURE_ENCODER_CONSTANTS_H
+#pragma once
 
 #include <cstdint>
 
 namespace quadrature_encoder_constants {
+    static constexpr uint8_t PWM_SERVO = 0x10;
+
     static constexpr uint8_t CLEAR_COUNTERS = 0x20;
     static constexpr uint8_t CLEAR_COUNTER_X = CLEAR_COUNTERS + 1;
     static constexpr uint8_t CLEAR_COUNTER_Y = CLEAR_COUNTERS + 2;
@@ -40,5 +41,3 @@ namespace quadrature_encoder_constants {
 
     static constexpr uint8_t LIMITS = 0x70;
 }
-
-#endif      // QUADRATURE_ENCODER_CONSTANTS_H
