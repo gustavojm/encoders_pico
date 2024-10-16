@@ -1,4 +1,4 @@
-#include "core1_spi.h"
+    #include "core1_spi.h"
 
 extern quadrature_encoder *axes_tbl[];
 uint8_t targets_reached = 0;

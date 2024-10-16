@@ -25,7 +25,7 @@ const uint ON_BOARD_LED_PIN = PICO_DEFAULT_LED_PIN;
 
 const uint IRQ_TO_REMA = 20;
 const uint SPI_ERROR_LED = 21;
-const uint SERVO_PIN = 7;
+const uint SERVO_PIN = 22;
 
 //
 // ---- quadrature encoder interface example
