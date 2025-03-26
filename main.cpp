@@ -77,7 +77,7 @@ int main() {
     for (int hard_limit_input_pin = 0; hard_limit_input_pin < 7; hard_limit_input_pin++) {
         gpio_init(hard_limit_input_pin);
         #ifdef WITHOUT_PONCHO
-           gpio_pull_down(hard_limit_input_pin);
+           gpio_pull_up(hard_limit_input_pin);
         #else
            gpio_disable_pulls(hard_limit_input_pin);
         #endif
