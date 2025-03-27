@@ -61,9 +61,19 @@ void gpio_callback(uint gpio, uint32_t events) {
     gpio_put(IRQ_TO_REMA, 1);
 }
 
+int unused_gpios[] = {6, 7, 22};
+
 int main() {
+    busy_wait_ms(400);          // Wait for initial clock stabilization
+    
     stdio_init_all();
 
+    for (auto gpio : unused_gpios) {    // Avoid floating inputs
+        gpio_init(gpio);
+        gpio_set_dir(gpio, GPIO_IN);
+        gpio_pull_down(gpio);
+    }
+    
     gpio_init(ON_BOARD_LED_PIN);
     gpio_set_dir(ON_BOARD_LED_PIN, GPIO_OUT);
 
