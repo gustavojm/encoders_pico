@@ -40,4 +40,5 @@ namespace quadrature_encoder_constants {
     static constexpr uint8_t AXIS_MASK = 0x07;
 
     static constexpr uint8_t LIMITS = 0x70;
+    static constexpr uint8_t ENABLED_LIMITS_MASK = 0b0011'1111;;
 }

@@ -1,4 +1,4 @@
-    #include "core1_spi.h"
+#include "core1_spi.h"
 
 extern quadrature_encoder *axes_tbl[];
 uint8_t targets_reached = 0;
@@ -65,10 +65,10 @@ void core1_entry() {
         switch (cmd & quadrature_encoder_constants::CMD_MASK) {
 
         case quadrature_encoder_constants::PWM_SERVO:
-                val = spi_tx_rx(current_value);
-                if (cmd & quadrature_encoder_constants::WRITE_MASK) {
-                    servo.set_angle(val);
-                }
+            val = spi_tx_rx(current_value);
+            if (cmd & quadrature_encoder_constants::WRITE_MASK) {
+                servo.set_angle(val);
+            }
             break;
 
         case quadrature_encoder_constants::COUNTERS:
@@ -138,7 +138,8 @@ void core1_entry() {
             break;
 
         case quadrature_encoder_constants::LIMITS:
-            hard_limits = (gpio_get_all() ^ 0x7F) & 0x7F;  // Invert and mask out spare input
+            hard_limits = (gpio_get_all() ^ quadrature_encoder_constants::ENABLED_LIMITS_MASK) &
+                          quadrature_encoder_constants::ENABLED_LIMITS_MASK;        // Invert and mask out spare input
             out_buf[0] = hard_limits;
             out_buf[1] = targets_reached;
             out_buf[2] = 0x00;
