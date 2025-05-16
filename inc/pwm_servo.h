@@ -27,15 +27,17 @@ public:
         int max_pulse_width = 2500;  // Maximum pulse width in microseconds
         float pulse_width = min_pulse_width + (angle / 180.0f) * (max_pulse_width - min_pulse_width);
 
+        pwm_set_gpio_level(PWM_PIN, static_cast<int>(pulse_width));
+
         // Enable PWM
         pwm_set_enabled(slice_num, true);
 
-        pwm_set_gpio_level(PWM_PIN, static_cast<int>(pulse_width));
-        sleep_ms(20);  // 2 Cycles are enough for it to latch the desired position, sending at least 3
+        sleep_ms(40);  // 2 Cycles are enough for it to latch the desired position, sending at least 6
         
         pwm_set_enabled(slice_num, false);
     }
-    
+  
+    private:
     uint PWM_PIN;
     uint slice_num;
 };

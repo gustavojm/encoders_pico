@@ -37,7 +37,7 @@ target_compile_definitions(${PROJECT_NAME} PUBLIC
         PICO_DEFAULT_SPI_SCK_PIN=18
         PICO_DEFAULT_SPI_TX_PIN=19
         PICO_DEFAULT_SPI_CSN_PIN=17
-        WITHOUT_PONCHO
+        #WITHOUT_PONCHO
         )
   
 
