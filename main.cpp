@@ -61,7 +61,7 @@ void gpio_callback(uint gpio, uint32_t events) {
     gpio_put(IRQ_TO_REMA, 1);
 }
 
-int unused_gpios[] = {6, 7, 22};
+int unused_gpios[] = {6, 7};
 
 int main() {
     busy_wait_ms(400);          // Wait for initial clock stabilization
